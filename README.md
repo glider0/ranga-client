@@ -32,6 +32,10 @@ Please see [Ranga end-user manual](https://glider0.github.io/ranga_doc/euman.htm
 
 ## Contribution
 
+`ranga-cli` - The client which written by Bash.
+
+`bash-completion/ranga-cli-completion.bash` - The bash-completion script for client
+
 TODO
 
 ## Copyright and warranty
