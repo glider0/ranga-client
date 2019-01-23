@@ -1,0 +1,570 @@
+#!/usr/bin/env bash
+
+script_name="${0##*/}"
+version="0.1"
+
+errcode=(
+	"Success"
+	"Invalid argument"
+	"Function not implemented"
+	"Permission denied"
+	"Internal fault"
+	"Resource temporarily unavailable"
+	"Operation would block"
+	"Input/output error"
+	"Device or resource busy"
+)
+
+[ -z "${NSWA_GATWAY}" ] && export NSWA_GATWAY="192.168.1.1:8088"
+[ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
+_DISP_AUTOCOMPLETE_HELPER='0'
+
+RANGA_ONLINE_STORE_URI='https://glider0.github.io/ranga-store/'
+RANGA_ONLINE_STORE_URI_MIRROR='https://fytlc.coding.me/ranga-mirror/ranga-store/'
+CURL="curl"
+
+if [ -z "${XDG_RUNTIME_DIR}" ]; then
+	TOKEM_FILE_NAME='.nswa_usertoken'
+else
+	TOKEM_FILE_NAME="${XDG_RUNTIME_DIR}/nswa_rt_usertoken"
+fi
+
+COOKIE=''
+if [ -f "$TOKEM_FILE_NAME" ]; then
+	COOKIE=`cat "$TOKEM_FILE_NAME"`
+fi
+
+CLI_DEBUG=''
+
+errmsg() {
+	if [ -z "${1}" -o -z "${errcode[${1}]}" ]; then
+		echo "Unknown error"
+	else
+		echo "${errcode[${1}]}"
+	fi
+}
+
+errquit() {
+	if [ "$1" = '-m' ]; then
+		shift
+		echo "$*" >&2
+	else
+		errmsg "$1" >&2
+	fi
+
+	exit 1
+}
+
+dbg() {
+	[ "$CLI_DEBUG" = '1' ]
+}
+
+printdbg() {
+	echo "DEBUG: $*" >&2
+}
+
+urlencode() {
+	local data
+	data="`${CURL} -s -o /dev/null -w %{url_effective} --get --data-urlencode "$1" ""`"
+	if [ "$?" != '3' ]; then
+		echo "Unexpected fatal error" >&2
+		exit 1
+	fi
+	echo "${data##/?}"
+	return 0
+}
+
+cgiAPI() {
+	local api="$1"
+	shift
+
+	dbg && printdbg "cgiAPI: $api"
+	dbg && printdbg "> $*"
+	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
+	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -G -b "${COOKIE}" -s "http://${NSWA_GATWAY}/cgi-bin/${api}" "$@"`
+	respParse "$curl_output"
+}
+
+cgiAPI_POST() {
+	local api="$1"
+	shift
+	local data="$1"
+	shift
+
+	local query=''
+	for var in "$@" ; do
+		query="${query}`urlencode ${var}`&"
+	done
+
+	dbg && printdbg "cgiAPI_POST: $api"
+	dbg && printdbg "> $query"
+	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
+	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -b "${COOKIE}" -s "http://${NSWA_GATWAY}/cgi-bin/${api}?${query}" --data-binary "$data"`
+	respParse "$curl_output"
+}
+
+respParse() {
+	unset -v payload
+	unset -v header
+
+	declare -g -A header
+	declare -g payload
+
+	while read -r a; do
+		if [ -z "$a" ]; then
+			payload=`cat`
+			break
+		fi
+
+		dbg && printdbg "< $a"
+
+		local k="${a%%:*}"
+		local v="${a#*: }"
+		header["$k"]="$v"
+	done <<< "$1"
+	#done < <(echo -n "$1")
+
+	dbg && [ -n "$payload" ] && printdbg "<<< ${payload//$'\n'/\\n}"
+}
+
+disp() {
+	local section="$1"
+	shift
+	local target="$1"
+	shift
+	local data=''
+	for var in "$@" ; do
+		data="${data}${var}"$'\n'
+	done
+	cgiAPI_POST disp.sh "${data}" "section=${section}" "target=${target}"
+
+	if [ "${_DISP_AUTOCOMPLETE_HELPER}" = '1' ]; then
+		echo "$payload"
+		return
+	fi
+
+	[ "${header[code]}" != '0' ] && errmsg "${header[code]}"
+
+	case "${header[content-type]}" in
+	dispTargetsList)
+		echo "The current system provides the following targets of section '${header[disp-section]}'."
+		echo 'Not found the target you need? Please confirm that the system has been upgraded to the latest version.'
+		echo
+		while read -r a; do
+			echo "    $a"
+		done <<< "$payload"
+		echo
+		echo 'To dispatch to a target of this section, you can use'
+		echo
+		echo "    $script_name ${header[disp-section]} <target> ..."
+		echo
+		;;
+	dispOutput)
+		[ -n "$payload" ] && echo "$payload"
+		;;
+	*)
+		[ "${header[code]}" = '0' ] && errquit -m "Unknown content type: ${header[content-type]}"
+		;;
+	esac
+}
+
+auth() {
+	local password=''
+
+	while true ; do
+		local opt="$1"
+		if [ "$opt" = "" ] || [ "$opt" = "--" ]; then
+			shift
+			break
+		fi
+		
+		if [ "${opt:0:1}" = "-" ]; then
+			shift
+
+			case "${opt}" in
+			-p|--password)
+				read -p "Enter super password: " -s password
+				echo
+				;;
+			-e)
+				password="$RANGAPASS"
+				;;
+			--password-text)
+				password="$1"
+				shift
+				;;
+			-q|--logout)
+				rm -f "${TOKEM_FILE_NAME}"
+				exit 0
+				;;
+			esac
+		else
+			break
+		fi
+	done
+
+	if [ -z "$password" ]; then
+		cat <<EOF
+usage: $script_name auth [-p|--password] [-e] [--password-text <password>]
+
+  -p, --password    Provide password interactively
+  -e                Password is passed as env-var "RANGAPASS"
+  --password-text   Provide password as argument (security unwise)
+  -q, --logout      Unlink token file
+
+EOF
+		exit 1
+	fi
+
+	cgiAPI auth.sh --data-urlencode "m=pw" --data-urlencode "pw=$password"
+	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
+
+	case "${header[content-type]}" in
+	authToken)
+		echo -n "USER_TOKEN=${payload}" > "$TOKEM_FILE_NAME"
+		echo 'Login success'
+		;;
+	*)
+		errquit -m "Unknown content type: ${header[content-type]}"
+		;;
+	esac
+}
+
+addon() {
+	case "$1" in
+	install-extension)
+		[ -f "$2" ] || errquit -m "File '$2' not exist."
+		cgiAPI_POST addon.sh "@$2" "action=install"
+		;;
+	remove-extension)
+		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
+		cgiAPI addon.sh --data-urlencode "action=remove" --data-urlencode "pkgname=$2"
+		;;
+	print-info)
+		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
+		cgiAPI addon.sh --data-urlencode "action=info" --data-urlencode "pkgname=$2"
+		;;
+	list-extensions)
+		cgiAPI addon.sh --data-urlencode "action=list"
+		;;
+	update-cache)
+		cgiAPI addon.sh --data-urlencode "action=cache"
+		;;
+	set-webcon)
+		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
+		cgiAPI addon.sh --data-urlencode "action=setwebcon" --data-urlencode "pkgname=$2"
+		;;
+	invoke)
+		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
+		[ -z "$2" ] && errquit -m "Please enter valid API name."
+
+		local data=''
+		local path="ivkext.sh/${2}/${3//./\/}"
+
+		shift 3
+
+		for var in "$@" ; do
+			data="${data}${var}"$'\n'
+		done
+		cgiAPI_POST "${path}" "$data"
+		;;
+	list-components)
+		cgiAPI addon.sh --data-urlencode "action=ls-components"
+		;;
+	undeploy-component)
+		[ -z "$2" ] && errquit -m "Please enter valid uuid."
+		cgiAPI addon.sh --data-urlencode "action=undeploy" --data-urlencode "uuid=$2"
+		;;
+	*)
+		cat <<EOF
+usage: $script_name addon <command>
+
+Extension APIs
+
+  install-extension <file>    - Install a user extension to system
+  remove-extension <pkgname>  - Remove a user extension from system
+  list-extensions             - List all of extensions
+  print-info <pkgname>        - Print infomation of a extension
+  update-cache                - Re-build extension caches
+  set-webcon <pkgname>        - Set the extension to provide system webcon
+  invoke <pkgname> <api> ...  - Invoke an API provided by a extension
+
+Component APIs
+
+  list-components             - List all of components
+  undeploy-component <uuid>   - Undeploy and purge a component
+
+EOF
+		exit
+		;;
+	esac
+
+	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
+	[ -n "$payload" ] && echo "$payload"
+}
+
+deploy_sw() {
+	cgiAPI_POST swupload.sh "@${1}" "action=patch" ${SD_REBOOT} ${SD_STANDALONE} ${SD_PASSWORD}
+	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
+	[ -n "$payload" ] && echo "$payload"
+}
+
+__curl_download() {
+	httpcode=`${CURL} -s "${1}" -w "%{http_code}" -o "${2}"`
+	if [ "$?" != '0' ]; then 
+		echo "$3: Network error." >&2
+		return 1
+	fi
+
+	dbg && printdbg "$3: HTTP: ${httpcode}"
+
+	case "$httpcode" in
+	200) return 0 ;;
+	404) echo "$3: '$1' not exsit." >&2 ;;
+	*) echo "$3: Server error." >&2 ;;
+	esac
+
+	return 1
+}
+
+download_file() {
+	local file
+	local httpcode
+
+	file=`mktemp`
+	[ "$?" != '0' ] && errquit -m "Failed to create a temp file"
+
+	dbg && printdbg "temp file: ${file}"
+
+	if ! __curl_download "${RANGA_ONLINE_STORE_URI}/${1}" "$file" 'origin server' ; then
+		if ! __curl_download "${RANGA_ONLINE_STORE_URI_MIRROR}/${1}" "$file" 'mirror' ; then
+			errquit -m 'Download error'
+		fi
+	fi
+
+	echo "$file"
+}
+
+parse_data() {
+	declare -n p="$1"
+
+	while read -r a; do
+		dbg && printdbg "parse_data: < $a"
+		local k="${a%%:*}"
+		local v="${a#*: }"
+		p["$k"]="$v"
+	done
+}
+
+swdeploy() {
+	local opt=''
+	SD_REBOOT='reboot=0'
+	SD_STANDALONE='standalone=0'
+	SD_PASSWORD='password=nil'
+	SD_ASYNC=''
+	SD_POLL_TIME='60'
+
+	while true ; do
+		local opt="$1"
+		if [ "$opt" = "" ] || [ "$opt" = "--" ]; then
+			shift
+			break
+		fi
+		
+		if [ "${opt:0:1}" = "-" ]; then
+			shift
+
+			case "${opt}" in
+			--auth-standalone)
+				SD_STANDALONE='standalone=1'
+				read -p "Enter super password: " -s SD_PASSWORD
+				SD_PASSWORD="password=${SD_PASSWORD}"
+				echo
+				;;
+			-a|--async)
+				SD_ASYNC='1'
+				;;
+			-r|--reboot)
+				SD_REBOOT='reboot=1'
+				;;
+			--max-poll-time)
+				SD_POLL_TIME="$1"
+				shift
+				;;
+			esac
+		else
+			break
+		fi
+	done
+
+	shift
+	case "$opt" in
+	component)
+		[ -z "$1" ] && errquit -m "Please enter valid uuid."
+		file=`download_file "ota/${ver[version]}-${ver[arch]}"`
+		[ -z "$file" ] && exit
+		deploy_sw "$file"
+		;;
+	sync)
+		local _savev=''
+		while true ; do
+			unset -v ver
+			unset -v update_info
+			declare -A ver
+			declare -A update_info
+			local file=''
+
+			parse_data ver < <("$0" query sysinfo -vp)
+
+			[ -z "${ver[version]}" -o -z "${ver[arch]}" ] && errquit -m "[sync] Can not fetch system infomation."
+
+			echo "[sync] version: ${ver[version]}, arch: ${ver[arch]}"
+			echo "[sync] chip: ${ver[chip]}, board: ${ver[board]}"
+			echo '[sync] Check for the next version update.'
+
+			[ "${ver[version]}" = "${_savev}" ] && errquit -m '[sync] Unexpected version number. Exit to avoid infinite loop.'
+
+			file=`download_file "ota/${ver[version]}-${ver[arch]}"`
+			[ -z "$file" ] && exit 1
+
+			parse_data update_info < <(cat "$file")
+			rm -f "$file"
+
+			[ "${update_info[v]}" = '1' ] || errquit -m "[sync] invaild update meta." 
+
+			case "${update_info[t]}" in
+			tmp-unavl)
+				echo '[sync] Your system is already the latest version.'
+				[ -z "$_savev" ] && echo 'Nothing to do today.'
+				break
+				;;
+			ota-generic)
+				echo "[sync] Downloading ota package '${update_info[next_version]}'..."
+				file=`download_file "${update_info[uri]}"`
+				[ -z "$file" ] && exit 1
+
+				echo "[sync] Deploying '${update_info[next_version]}' for your device..."
+				_savev="${ver[version]}"
+				deploy_sw "$file"
+				;;
+			open-uri)
+				echo "[sync] !!! Updates need to be done manually, please refer to ${update_info[uri]}"
+				[ -n "$DISPLAY" ] && xdg-open "${update_info[uri]}"
+				break
+				;;
+			*)
+				echo '[sync] Unsupported type'
+				break
+				;;
+			esac
+		done
+		;;
+	flash)
+		[ -f "$1" ] && errquit -m "File '$1' not exsit."
+		deploy_sw "$1"
+		;;
+	status|log)
+		cgiAPI swupload.sh --data-urlencode "action=${opt}" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
+		[ "${header[code]}" != '0' ] && errquit "${header[code]}"
+		case "${header[swdeploy-status]}" in
+		1) echo 'Server status DEPLOYING' ;;
+		0) echo 'Server status IDLE' ;;
+		'') ;;
+		0) echo 'Warning: server status unknown' ;;
+		esac
+		[ -n "$payload" ] && echo "$payload"
+		;;
+	*)
+		cat <<EOF
+usage: $script_name swdeploy [OPTIONS] component <uuid>
+  Deploy a component from NSWA Ranga Online Store by UUID.
+
+usage: $script_name swdeploy [OPTIONS] sync
+  Deploy next OTA system upgrade from NSWA Ranga Online Store.
+
+usage: $script_name swdeploy [OPTIONS] flash <file>
+  Deploy a OTA package, a component package or other software package from file.
+
+usage: $script_name swdeploy [OPTIONS] <status|log>
+  Display server status or recent log.
+  OPTIONS except --auth-standalone will be ignored.
+
+OPTIONS:
+
+  -a, --async                Do not wait for flash complete.
+  -r, --reboot               Reboot system after deployment.
+  --max-poll-time <time>     Set the max times of polling in sync mode.
+  --auth-standalone          Use standalone auth mode.
+
+  standalone auth mode can be used to rescue system when the authentication module is damaged.
+
+EOF
+		exit
+	;;
+	esac
+}
+
+while true ; do
+	opt="$1"
+	if [ "$opt" = "" ] || [ "$opt" = "--" ]; then
+		shift
+		break
+	fi
+	
+	if [ "${opt:0:1}" = "-" ]; then
+		shift
+
+		case "${opt}" in
+		--debug)
+			CLI_DEBUG='1'
+			;;
+		esac
+	else
+		break
+	fi
+done
+
+case "$1" in
+config|action|query)
+	disp "$@"
+	;;
+auth|addon)
+	cmd="$1"
+	shift
+	"$cmd" "$@"
+	;;
+swdeploy)
+	shift
+	swdeploy "$@"
+	;;
+_disp)
+	_DISP_AUTOCOMPLETE_HELPER=1
+	disp "$2"
+	;;
+*)
+	cat <<EOF
+ranga-cli - NSWA Ranga client version ${version}
+Copyright (C) 2019 NSWA Ranga Maintainers.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+This is free software; you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+If you have purchased a commercial license for the Ranga system,
+This program which is published from original version has same warranty.
+
+usage: ${script_name} [--debug] <command>
+
+  config   - Dispatch to one of system config tools
+  action   - Dispatch to one of system action invokers
+  query    - Dispatch to one of infomation queriers
+  auth     - Log in/out superuser
+  addon    - Components and extensions
+  swdeploy - Software deployment tool
+
+to see more infomation about sub-command. run
+
+  ${script_name} <command>
+
+EOF
+	;;
+esac
