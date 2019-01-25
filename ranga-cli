@@ -19,8 +19,8 @@ errcode=(
 [ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
 _DISP_AUTOCOMPLETE_HELPER='0'
 
-RANGA_ONLINE_STORE_URI='https://glider0.github.io/ranga-store/'
-RANGA_ONLINE_STORE_URI_MIRROR='https://fytlc.coding.me/ranga-mirror/ranga-store/'
+RANGA_SW_DOWNLOAD_URI_PREFIX='https://glider0.github.io/sftwdl/'
+RANGA_SW_DOWNLOAD_URI_PREFIX_MIRROR='https://fytlc.coding.me/ranga-mirror/sftwdl/'
 CURL="curl"
 
 if [ -z "${XDG_RUNTIME_DIR}" ]; then
@@ -336,8 +336,8 @@ download_file() {
 
 	dbg && printdbg "temp file: ${file}"
 
-	if ! __curl_download "${RANGA_ONLINE_STORE_URI}/${1}" "$file" 'origin server' ; then
-		if ! __curl_download "${RANGA_ONLINE_STORE_URI_MIRROR}/${1}" "$file" 'mirror' ; then
+	if ! __curl_download "${RANGA_SW_DOWNLOAD_URI_PREFIX}/${1}" "$file" 'origin server' ; then
+		if ! __curl_download "${RANGA_SW_DOWNLOAD_URI_PREFIX_MIRROR}/${1}" "$file" 'mirror' ; then
 			errquit -m 'Download error'
 		fi
 	fi
