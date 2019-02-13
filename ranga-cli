@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.1.1"
+version="0.1.2"
 
 errcode=(
 	"Success"
@@ -303,10 +303,48 @@ EOF
 	[ -n "$payload" ] && echo "$payload"
 }
 
+swdeploy_log() {
+	cgiAPI swupload.sh --data-urlencode "action=log" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
+	[ "${header[code]}" != '0' ] && return "${header[code]}"
+	[ -n "$payload" ] && echo "$payload"
+}
+
+swdeploy_status() {
+	cgiAPI swupload.sh --data-urlencode "action=status" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
+	[ "${header[code]}" != '0' ] && return "${header[code]}"
+
+	echo "${header[swdeploy-status]}"
+}
+
+deploy_sw_poll_log_window="0"
+deploy_sw_poll() {
+	sleep 1
+	while [ "$SD_POLL_TIME" != "0" ]; do
+		local code=`swdeploy_status`
+
+		local log=`swdeploy_log`
+		echo "$log" | tail -n "+${deploy_sw_poll_log_window}"
+		deploy_sw_poll_log_window=`echo "$log" | wc -l`
+		deploy_sw_poll_log_window=$(($deploy_sw_poll_log_window+1))
+
+		[ "$code" = "0" ] && return
+		SD_POLL_TIME=$(($SD_POLL_TIME-1))
+		sleep 1
+	done
+
+	errquit -m "Timeout to wait for flash completed, please check it yourself"
+	exit 1
+}
+
 deploy_sw() {
 	cgiAPI_POST swupload.sh "@${1}" "action=patch" ${SD_REBOOT} ${SD_STANDALONE} ${SD_PASSWORD}
 	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
 	[ -n "$payload" ] && echo "$payload"
+
+	[ "${SD_ASYNC}" = '1' ] && return
+
+	deploy_sw_poll_log_window="0"
+	deploy_sw_poll
 }
 
 __curl_download() {
@@ -464,16 +502,16 @@ swdeploy() {
 		[ -f "$1" ] || errquit -m "File '$1' not exsit."
 		deploy_sw "$1"
 		;;
-	status|log)
-		cgiAPI swupload.sh --data-urlencode "action=${opt}" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
-		[ "${header[code]}" != '0' ] && errquit "${header[code]}"
-		case "${header[swdeploy-status]}" in
+	status)
+		case `swdeploy_status` in
 		1) echo 'Server status DEPLOYING' ;;
 		0) echo 'Server status IDLE' ;;
 		'') ;;
 		0) echo 'Warning: server status unknown' ;;
 		esac
-		[ -n "$payload" ] && echo "$payload"
+		;;
+	log)
+		swdeploy_status log
 		;;
 	*)
 		cat <<EOF
