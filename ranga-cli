@@ -406,6 +406,7 @@ swdeploy() {
 		deploy_sw "$file"
 		;;
 	sync)
+		SD_ASYNC=''
 		local _savev=''
 		while true ; do
 			unset -v ver
@@ -460,7 +461,7 @@ swdeploy() {
 		done
 		;;
 	flash)
-		[ -f "$1" ] && errquit -m "File '$1' not exsit."
+		[ -f "$1" ] || errquit -m "File '$1' not exsit."
 		deploy_sw "$1"
 		;;
 	status|log)
