@@ -439,7 +439,7 @@ swdeploy() {
 	case "$opt" in
 	component)
 		[ -z "$1" ] && errquit -m "Please enter valid uuid."
-		file=`download_file "ota/${ver[version]}-${ver[arch]}"`
+		file=`download_file "component/${1}"`
 		[ -z "$file" ] && exit
 		deploy_sw "$file"
 		;;
@@ -511,7 +511,7 @@ swdeploy() {
 		esac
 		;;
 	log)
-		swdeploy_status log
+		swdeploy_log
 		;;
 	*)
 		cat <<EOF

@@ -28,7 +28,7 @@ $ ./install.sh
 
 ## Usage
 
-Please see [Ranga end-user manual](https://glider0.github.io/doc.zh/euman.html)
+Please see [Ranga end-user manual](https://glider0.github.io/doc.zh/euman.html) (Chinese version)
 
 ## Contribution
 
@@ -36,7 +36,23 @@ Please see [Ranga end-user manual](https://glider0.github.io/doc.zh/euman.html)
 
 `bash-completion/ranga-cli-completion.bash` - The bash-completion script for client
 
-TODO
+What you can do?
+
+- Welcome to fixup issues in `ranga-cli`, `install.sh` and `ranga-cli-completion.bash`.
+
+- Welcome to optimize performance for the program.
+
+- Welcome to port ranga-cli to other systems with fixes.
+
+- Welcome to add features for the program.
+
+What should you pay attention to?
+
+- When you add a sub-command for `ranga-cli`, you need write document (in Chinese) in Markdown and update the `ranga-cli-completion.bash`.
+
+- Please open a Pull-requst or send the `.patch` file by open an Issue.
+
+- You need to explain the purpose of your patch. For example, what problems have you encountered and how you solved it? What is the purpose of your added functionality?
 
 ## Copyright and warranty
 
