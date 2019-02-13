@@ -28,7 +28,7 @@ $ ./install.sh
 
 ## Usage
 
-Please see [Ranga end-user manual](https://glider0.github.io/ranga_doc/euman.html)
+Please see [Ranga end-user manual](https://glider0.github.io/doc.zh/euman.html)
 
 ## Contribution
 
