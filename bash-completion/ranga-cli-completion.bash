@@ -24,7 +24,7 @@ _ranga_cli() {
 		case "${words[1]}" in
 		config|action|query)
 			export RANGA_CLIENT_HTTP_TIMEOUT=4
-			COMPREPLY=( $(compgen -W "$(ranga-cli _disp "${words[1]}")" -- "$cur") )
+			COMPREPLY=( $(compgen -W "$(ranga-cli _disp "${words[1]}") -R --raw" -- "$cur") )
 			;;
 		auth)
 			COMPREPLY=( $(compgen -W '-p -e --password-text -q' -- "$cur") )
