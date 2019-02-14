@@ -15,12 +15,12 @@ errcode=(
 	"Device or resource busy"
 )
 
-[ -z "${NSWA_GATWAY}" ] && export NSWA_GATWAY="192.168.1.1:8088"
+[ -z "${NSWA_GATEWAY}" ] && export NSWA_GATEWAY="192.168.1.1:8088"
 [ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
 _DISP_AUTOCOMPLETE_HELPER='0'
 
-RANGA_SW_DOWNLOAD_URI_PREFIX='https://glider0.github.io/sftwdl/'
-RANGA_SW_DOWNLOAD_URI_PREFIX_MIRROR='https://fytlc.coding.me/ranga-mirror/sftwdl/'
+RANGA_SWDL_URI_PREFIX='https://glider0.github.io/swdl/'
+RANGA_SWDL_URI_PREFIX_MIRROR='https://fytlc.coding.me/ranga-mirror/swdl/'
 CURL="curl"
 
 if [ -z "${XDG_RUNTIME_DIR}" ]; then
@@ -81,7 +81,7 @@ cgiAPI() {
 	dbg && printdbg "cgiAPI: $api"
 	dbg && printdbg "> $*"
 	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
-	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -G -b "${COOKIE}" -s "http://${NSWA_GATWAY}/cgi-bin/${api}" "$@"`
+	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -G -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}" "$@"`
 	respParse "$curl_output"
 }
 
@@ -99,7 +99,7 @@ cgiAPI_POST() {
 	dbg && printdbg "cgiAPI_POST: $api"
 	dbg && printdbg "> $query"
 	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
-	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -b "${COOKIE}" -s "http://${NSWA_GATWAY}/cgi-bin/${api}?${query}" --data-binary "$data"`
+	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}?${query}" --data-binary "$data"`
 	respParse "$curl_output"
 }
 
@@ -374,8 +374,8 @@ download_file() {
 
 	dbg && printdbg "temp file: ${file}"
 
-	if ! __curl_download "${RANGA_SW_DOWNLOAD_URI_PREFIX}/${1}" "$file" 'origin server' ; then
-		if ! __curl_download "${RANGA_SW_DOWNLOAD_URI_PREFIX_MIRROR}/${1}" "$file" 'mirror' ; then
+	if ! __curl_download "${RANGA_SWDL_URI_PREFIX}/${1}" "$file" 'origin server' ; then
+		if ! __curl_download "${RANGA_SWDL_URI_PREFIX_MIRROR}/${1}" "$file" 'mirror' ; then
 			errquit -m 'Download error'
 		fi
 	fi
