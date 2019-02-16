@@ -18,13 +18,13 @@ If you want to use experimental user installation options, run `./install.sh --u
 
 ## Install for Windows
 
-Use our Windows version tarball `ranga-client-windows-binaries.7z` or you can install it in Cygwin or MSYS2
+Download our Windows version tarball `ranga-client-windows.7z` from [RELEASE](https://github.com/glider0/ranga-client/releases) page.
 
-```
-$ git clone https://github.com/glider0/ranga-client.git
-$ cd ranga-client
-$ ./install.sh
-```
+Unpack this archive, and run `setup.bat` to use it.
+
+The Windows version is experimental. If you have problems, try installing the UNIX version of ranga-client in msys2 or cygwin on Windows.
+
+The windows version of this software uses msys2, the binary and script programs for msys2 are included in the distribution package. For more information about msys2, please navigate to https://www.msys2.org/
 
 ## Usage
 
