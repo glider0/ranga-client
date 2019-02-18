@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.1.4"
+version="0.1.5"
 
 errcode=(
 	"Success"
@@ -18,6 +18,8 @@ errcode=(
 [ -z "${NSWA_GATEWAY}" ] && export NSWA_GATEWAY="192.168.1.1:8088"
 [ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
 _DISP_AUTOCOMPLETE_HELPER='0'
+
+HTTP_USER_AGENT="ranga-client/$version (`uname -o`) cURL"
 
 RANGA_SWDL_URI_PREFIX='https://glider0.github.io/swdl/'
 RANGA_SWDL_URI_PREFIX_MIRROR='https://fytlc.coding.me/ranga-mirror/swdl/'
@@ -65,7 +67,7 @@ printdbg() {
 
 urlencode() {
 	local data
-	data="`${CURL} -s -o /dev/null -w %{url_effective} --get --data-urlencode "$1" ""`"
+	data="`${CURL} -A "$HTTP_USER_AGENT" -s -o /dev/null -w %{url_effective} --get --data-urlencode "$1" ""`"
 	if [ "$?" != '3' ]; then
 		echo "Unexpected fatal error" >&2
 		exit 1
@@ -81,7 +83,7 @@ cgiAPI() {
 	dbg && printdbg "cgiAPI: $api"
 	dbg && printdbg "> $*"
 	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
-	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -G -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}" "$@"`
+	local curl_output=`${CURL} -A "$HTTP_USER_AGENT" -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -G -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}" "$@"`
 	respParse "$curl_output"
 }
 
@@ -99,7 +101,7 @@ cgiAPI_POST() {
 	dbg && printdbg "cgiAPI_POST: $api"
 	dbg && printdbg "> $query"
 	dbg && [ -n "${COOKIE}" ] && printdbg "> ${COOKIE}"
-	local curl_output=`${CURL} -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}?${query}" --data-binary "$data"`
+	local curl_output=`${CURL} -A "$HTTP_USER_AGENT" -m "${RANGA_CLIENT_HTTP_TIMEOUT}" -b "${COOKIE}" -s "http://${NSWA_GATEWAY}/cgi-bin/${api}?${query}" --data-binary "$data"`
 	respParse "$curl_output"
 }
 
@@ -278,11 +280,25 @@ addon() {
 		cgiAPI addon.sh --data-urlencode "action=setwebcon" --data-urlencode "pkgname=$2"
 		;;
 	invoke)
-		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
+		shift
+		while true ; do
+			local opt="$1"
+			[ "$opt" = "--" ] && shift && break
+			[ "${opt:0:1}" = "-" ] || break
+
+			shift
+			case "${opt}" in
+			--debug)
+				HTTP_USER_AGENT="ranga-extensions-debug"
+				;;
+			esac
+		done
+
+		[ -z "$1" ] && errquit -m "Please enter valid pkgname."
 		[ -z "$2" ] && errquit -m "Please enter valid API name."
 
 		local data=''
-		local path="ivkext.sh/${2}/${3//./\/}"
+		local path="ivkext.sh/${1}/${2//./\/}"
 
 		shift 3
 
@@ -310,7 +326,9 @@ Extension APIs
   print-info <pkgname>        - Print infomation of a extension
   update-cache                - Re-build extension caches
   set-webcon <pkgname>        - Set the extension to provide system webcon
-  invoke <pkgname> <api> ...  - Invoke an API provided by a extension
+  invoke ...                  - Invoke an API provided by a extension
+
+    invoke [--debug] <pkgname> <api> [args ...]
 
 Component APIs
 
@@ -371,7 +389,7 @@ deploy_sw() {
 }
 
 __curl_download() {
-	httpcode=`${CURL} -s "${1}" -w "%{http_code}" -o "${2}"`
+	httpcode=`${CURL} -A "$HTTP_USER_AGENT" -s "${1}" -w "%{http_code}" -o "${2}"`
 	if [ "$?" != '0' ]; then 
 		echo "$3: Network error." >&2
 		return 1
