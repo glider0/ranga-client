@@ -161,7 +161,7 @@ disp() {
 		done
 	esac
 
-	cgiAPI_POST disp.sh "${data}" "section=${section}" "target=${target}" "mode=${mode}"
+	cgiAPI_POST disp "${data}" "section=${section}" "target=${target}" "mode=${mode}"
 
 	if [ "${_DISP_AUTOCOMPLETE_HELPER}" = '1' ]; then
 		echo "$payload"
@@ -241,7 +241,7 @@ EOF
 		exit 1
 	fi
 
-	cgiAPI auth.sh --data-urlencode "m=pw" --data-urlencode "pw=$password"
+	cgiAPI auth --data-urlencode "m=pw" --data-urlencode "pw=$password"
 	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
 
 	case "${header[content-type]}" in
@@ -259,25 +259,25 @@ addon() {
 	case "$1" in
 	install-extension)
 		[ -f "$2" ] || errquit -m "File '$2' not exist."
-		cgiAPI_POST addon.sh "@$2" "action=install"
+		cgiAPI_POST addon "@$2" "action=install"
 		;;
 	remove-extension)
 		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
-		cgiAPI addon.sh --data-urlencode "action=remove" --data-urlencode "pkgname=$2"
+		cgiAPI addon --data-urlencode "action=remove" --data-urlencode "pkgname=$2"
 		;;
 	print-info)
 		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
-		cgiAPI addon.sh --data-urlencode "action=info" --data-urlencode "pkgname=$2"
+		cgiAPI addon --data-urlencode "action=info" --data-urlencode "pkgname=$2"
 		;;
 	list-extensions)
-		cgiAPI addon.sh --data-urlencode "action=list"
+		cgiAPI addon --data-urlencode "action=list"
 		;;
 	update-cache)
-		cgiAPI addon.sh --data-urlencode "action=cache"
+		cgiAPI addon --data-urlencode "action=cache"
 		;;
 	set-webcon)
 		[ -z "$2" ] && errquit -m "Please enter valid pkgname."
-		cgiAPI addon.sh --data-urlencode "action=setwebcon" --data-urlencode "pkgname=$2"
+		cgiAPI addon --data-urlencode "action=setwebcon" --data-urlencode "pkgname=$2"
 		;;
 	invoke)
 		shift
@@ -298,7 +298,7 @@ addon() {
 		[ -z "$2" ] && errquit -m "Please enter valid API name."
 
 		local data=''
-		local path="ivkext.sh/${1}/${2//./\/}"
+		local path="ivkext/${1}/${2//./\/}"
 
 		shift 3
 
@@ -308,11 +308,11 @@ addon() {
 		cgiAPI_POST "${path}" "$data"
 		;;
 	list-components)
-		cgiAPI addon.sh --data-urlencode "action=ls-components"
+		cgiAPI addon --data-urlencode "action=ls-components"
 		;;
 	undeploy-component)
 		[ -z "$2" ] && errquit -m "Please enter valid uuid."
-		cgiAPI addon.sh --data-urlencode "action=undeploy" --data-urlencode "uuid=$2"
+		cgiAPI addon --data-urlencode "action=undeploy" --data-urlencode "uuid=$2"
 		;;
 	*)
 		cat <<EOF
@@ -345,13 +345,13 @@ EOF
 }
 
 swdeploy_log() {
-	cgiAPI swupload.sh --data-urlencode "action=log" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
+	cgiAPI swupload --data-urlencode "action=log" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
 	[ "${header[code]}" != '0' ] && return "${header[code]}"
 	[ -n "$payload" ] && echo "$payload"
 }
 
 swdeploy_status() {
-	cgiAPI swupload.sh --data-urlencode "action=status" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
+	cgiAPI swupload --data-urlencode "action=status" --data-urlencode ${SD_STANDALONE} --data-urlencode ${SD_PASSWORD}
 	[ "${header[code]}" != '0' ] && return "${header[code]}"
 
 	echo "${header[swdeploy-status]}"
@@ -378,7 +378,7 @@ deploy_sw_poll() {
 }
 
 deploy_sw() {
-	cgiAPI_POST swupload.sh "@${1}" "action=patch" ${SD_REBOOT} ${SD_STANDALONE} ${SD_PASSWORD}
+	cgiAPI_POST swupload "@${1}" "action=patch" ${SD_REBOOT} ${SD_STANDALONE} ${SD_PASSWORD}
 	[ "${header[code]}" != '0' ] && errquit "${header[code]}"
 	[ -n "$payload" ] && echo "$payload"
 
