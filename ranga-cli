@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.1.6"
+version="0.1.7"
 
 errcode=(
 	"Success"
@@ -300,7 +300,7 @@ addon() {
 		local data=''
 		local path="ivkext/${1}/${2//./\/}"
 
-		shift 3
+		shift 2
 
 		for var in "$@" ; do
 			data="${data}${var}"$'\n'
