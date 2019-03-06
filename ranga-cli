@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.1.7"
+version="0.1.8"
 
 errcode=(
 	"Success"
@@ -504,7 +504,7 @@ swdeploy() {
 
 			[ "${ver[version]}" = "${_savev}" ] && errquit -m '[sync] Unexpected version number. Exit to avoid infinite loop.'
 
-			file=`download_file "ota/${ver[version]}-${ver[arch]}"`
+			file=`download_file "ota/${ver[version]}"`
 			[ -z "$file" ] && exit 1
 
 			parse_data update_info < <(cat "$file")
@@ -522,6 +522,16 @@ swdeploy() {
 				echo "[sync] Downloading ota package '${update_info[next_version]}'..."
 				file=`download_file "${update_info[uri]}"`
 				[ -z "$file" ] && exit 1
+
+				if [ "${update_info[magic_arch]}" != "universal" ]; then
+					grep "${ver[arch]}" <<< "${update_info[magic_arch]}" > /dev/null 2>&1
+					[ "$?" != '0' ] && errquit -m "This OTA only suitable for ${update_info[magic_arch]}."
+				fi
+
+				if [ "${update_info[magic_chip]}" != "universal" ]; then
+					grep "${ver[chip]}" <<< "${update_info[magic_chip]}" > /dev/null 2>&1
+					[ "$?" != '0' ] && errquit -m "This OTA only suitable for ${update_info[magic_chip]}."
+				fi
 
 				echo "[sync] Deploying '${update_info[next_version]}' for your device..."
 				_savev="${ver[version]}"
