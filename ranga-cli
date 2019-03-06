@@ -431,7 +431,7 @@ parse_data() {
 		dbg && printdbg "parse_data: < $a"
 		local k="${a%%:*}"
 		local v="${a#*: }"
-		p["$k"]="$v"
+		[ -n "$k" ] && p["$k"]="$v"
 	done
 }
 
@@ -500,7 +500,7 @@ swdeploy() {
 
 			echo "[sync] version: ${ver[version]}, arch: ${ver[arch]}"
 			echo "[sync] chip: ${ver[chip]}, board: ${ver[board]}"
-			echo '[sync] Check for the next version update.'
+			echo '[sync] checking for the next version update...'
 
 			[ "${ver[version]}" = "${_savev}" ] && errquit -m '[sync] Unexpected version number. Exit to avoid infinite loop.'
 
