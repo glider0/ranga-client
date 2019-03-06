@@ -536,6 +536,13 @@ swdeploy() {
 				echo "[sync] Deploying '${update_info[next_version]}' for your device..."
 				_savev="${ver[version]}"
 				deploy_sw "$file"
+
+				if [ "${update_info[x-sync-control]}" = "stop" ]; then
+					echo "[sync] Warning: This package stop your sync process."
+					echo "This may be because this update requires a reboot of the system (which may already be restarted now), etc."
+					echo "In addition, we recommend reading the note for this update to identify other areas that may be of concern."
+					exit 0
+				fi
 				;;
 			open-uri)
 				echo "[sync] !!! Updates need to be done manually, please refer to ${update_info[uri]}"
