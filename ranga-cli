@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.2.0"
+version="0.2.1"
 
 errcode=(
 	"Success"
@@ -15,7 +15,7 @@ errcode=(
 	"Device or resource busy"
 )
 
-[ -z "${NSWA_GATEWAY}" ] && export NSWA_GATEWAY="192.168.1.1:8088"
+[ -z "${NSWA_GATEWAY}" ] && export NSWA_GATEWAY="192.168.1.1"
 [ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
 _DISP_AUTOCOMPLETE_HELPER='0'
 
