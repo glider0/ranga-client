@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.1.9"
+version="0.2.0"
 
 errcode=(
 	"Success"
@@ -153,15 +153,14 @@ disp() {
 
 	case "$mode" in
 	raw)
-		data=`cat`
+		cgiAPI_POST disp "@-" "section=${section}" "target=${target}" "mode=raw"
 		;;
 	*)
 		for var in "$@" ; do
 			data="${data}${var}"$'\n'
 		done
+		cgiAPI_POST disp "${data}" "section=${section}" "target=${target}" "mode=std"
 	esac
-
-	cgiAPI_POST disp "${data}" "section=${section}" "target=${target}" "mode=${mode}"
 
 	if [ "${_DISP_AUTOCOMPLETE_HELPER}" = '1' ]; then
 		echo "$payload"
