@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.2.1"
+version="0.2.1a"
 
 errcode=(
 	"Success"
@@ -213,6 +213,9 @@ auth() {
 			-e)
 				password="$RANGAPASS"
 				;;
+			-d)
+				password="ranga"
+				;;
 			--password-text)
 				password="$1"
 				shift
@@ -233,6 +236,7 @@ usage: $script_name auth [-p|--password] [-e] [--password-text <password>]
 
   -p, --password    Provide password interactively
   -e                Password is passed as env-var "RANGAPASS"
+  -d                Password is default password "ranga"
   --password-text   Provide password as argument (security unwise)
   -q, --logout      Unlink token file
 
