@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.3.1"
+version="0.3.2"
 
 errcode=(
 	"Success"
@@ -144,6 +144,9 @@ disp() {
 		-R|--raw)
 			mode="raw"
 			;;
+		-u|--upload)
+			mode="upload"
+			;;
 		esac
 	done
 
@@ -154,6 +157,9 @@ disp() {
 	case "$mode" in
 	raw)
 		cgiAPI_POST disp "@-" "section=${section}" "target=${target}" "mode=raw"
+		;;
+	upload)
+		cgiAPI_POST disp "@-" "section=${section}" "target=${target}" "mode=upload" "filename=${1}"
 		;;
 	*)
 		for var in "$@" ; do
