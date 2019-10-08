@@ -27,7 +27,7 @@ _ranga_cli() {
 			COMPREPLY=( $(compgen -W "$(ranga-cli _disp "${words[1]}") -R --raw -u --upload" -- "$cur") )
 			;;
 		auth)
-			COMPREPLY=( $(compgen -W '-p -e --password-text -q' -- "$cur") )
+			COMPREPLY=( $(compgen -W '-p -e --password-text -d -t -q' -- "$cur") )
 			;;
 		addon)
 			COMPREPLY=( $(compgen -W 'install-extension remove-extension list-extensions print-info update-cache set-webcon invoke list-components undeploy-component' -- "$cur") )

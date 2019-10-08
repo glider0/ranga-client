@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.3.2"
+version="0.3.4"
 
 errcode=(
 	"Success"
@@ -16,7 +16,7 @@ errcode=(
 )
 
 [ -z "${NSWA_GATEWAY}" ] && export NSWA_GATEWAY="192.168.1.1"
-[ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='120'
+[ -z "${RANGA_CLIENT_HTTP_TIMEOUT}" ] && RANGA_CLIENT_HTTP_TIMEOUT='4800'
 _DISP_AUTOCOMPLETE_HELPER='0'
 
 HTTP_USER_AGENT="ranga-client/$version (`uname -o`) cURL"
@@ -225,6 +225,11 @@ auth() {
 			--password-text)
 				password="$1"
 				shift
+				;;
+			-t|--token-cookie)
+				echo -n "USER_TOKEN=${1}" > "$TOKEM_FILE_NAME"
+				echo 'Cookie loaded'
+				exit 0
 				;;
 			-q|--logout)
 				rm -f "${TOKEM_FILE_NAME}"
