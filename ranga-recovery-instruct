@@ -15,4 +15,6 @@ while true ; do
 	[ "$?" = '0' ] || errquit "socat failed!"
 
 	echo "A device entering recovry! try 'telnet 192.168.1.1 2333'"
+
+	[ "$1" = "--once" ] && break
 done
