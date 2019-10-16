@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+script_name="${0##*/}"
+version="0.1"
+
+errquit() {
+	echo "error: $1"
+	exit 1
+}
+
+echo "waiting for device..."
+
+while true ; do
+	socat TCP-LISTEN:2333,bind=0.0.0.0,reuseaddr,end-close SYSTEM:"echo 'HTTP/1.0 200'; echo; echo 'Yes, Please.'"
+	[ "$?" = '0' ] || errquit "socat failed!"
+
+	echo "A device entering recovry! try 'telnet 192.168.1.1 2333'"
+done
