@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 script_name="${0##*/}"
-version="0.3.4"
+version="0.3.7"
 
 errcode=(
 	"Success"
@@ -584,12 +584,13 @@ swdeploy() {
 		case `swdeploy_status` in
 		1) echo 'Server status DEPLOYING' ;;
 		0) echo 'Server status IDLE' ;;
-		'') ;;
-		0) echo 'Warning: server status unknown' ;;
+		'') echo 'Server response empty, have you logged in or used standalone mode?';;
+		*) echo 'Warning: server status unknown' ;;
 		esac
 		;;
 	log)
 		swdeploy_log
+		[ "${header[code]}" != '0' ] && errquit "${header[code]}"
 		;;
 	fp_earse_configure)
 		swdeploy_action fp_earse_configure
